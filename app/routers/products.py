@@ -18,7 +18,7 @@ router = APIRouter(
 @router.get("/", response_model=list[ProductSchema])
 async def get_all_products(db: Session = Depends(get_db)):
     """
-    Возвращает список всех товаров.
+    Возвращает список всех активных товаров.
     """
     stmt = select(ProductModel).where(ProductModel.is_active == True)
     products = db.scalars(stmt).all()
@@ -30,11 +30,11 @@ async def create_product(product: ProductCreate, db: Session=Depends(get_db)):
     """
     Создаёт новый товар.
     """
-    # Проверка существования category_id
+    # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == product.category_id,
                                         CategoryModel.is_active == True)
     category = db.scalars(stmt).first()
-    if category is None:
+    if not category:
         raise HTTPException(status_code=400, detail="Category not found or inactive")
 
     # Создание нового товара
@@ -51,12 +51,12 @@ async def get_products_by_category(category_id: int, db: Session=Depends(get_db)
     """
     Возвращает список товаров в указанной категории по её ID.
     """
-    # Проверка существования category_id
+    # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == category_id,
                                        CategoryModel.is_active == True)
     category = db.scalars(stmt).first()
-    if category is None:
-        raise HTTPException(status_code=400, detail="Category not found or inactive")
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found or inactive")
     
     # Получение списка товаров в указанной катероии
     stmt = select(ProductModel).where(ProductModel.category_id == category_id,
@@ -74,20 +74,16 @@ async def get_product(product_id: int, db: Session=Depends(get_db)):
     stmt = select(ProductModel).where(ProductModel.id == product_id,
                                       ProductModel.is_active == True)
     product = db.scalars(stmt).first()
-    if product is None:
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
-    # Проверка существования category_id
+    # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == product.category_id,
                                        CategoryModel.is_active == True)
     category = db.scalars(stmt).first()
-    if category is None:
+    if not category:
         raise HTTPException(status_code=400, detail="Category not found or inactive")
     
-    # Получение информации о товаре
-    stmt = select(ProductModel).where(ProductModel.id  == product_id,
-                                      ProductModel.is_active == True)
-    product = db.scalars(stmt).first()
     return product
 
 
