@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.products import Product as ProductModel
 from app.models.categories import Category as CategoryModel
 from app.schemas import Product as ProductSchema, ProductCreate
-from app.db_depends import get_db
+from app.db_depends import get_db, get_async_db
 
 
 # Создаём маршрутизатор для товаров
@@ -16,17 +17,18 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[ProductSchema])
-async def get_all_products(db: Session = Depends(get_db)):
+async def get_all_products(db: AsyncSession = Depends(get_async_db)):
     """
     Возвращает список всех активных товаров.
     """
     stmt = select(ProductModel).where(ProductModel.is_active == True)
-    products = db.scalars(stmt).all()
+    result = await db.scalars(stmt)
+    products = result.all()
     return products
 
 
 @router.post("/", response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
-async def create_product(product: ProductCreate, db: Session=Depends(get_db)):
+async def create_product(product: ProductCreate, db: AsyncSession=Depends(get_async_db)):
     """
     Создаёт новый товар.
     """
