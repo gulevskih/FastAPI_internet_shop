@@ -28,23 +28,23 @@ async def get_all_products(db: AsyncSession = Depends(get_async_db)):
 
 
 @router.post("/", response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
-async def create_product(product: ProductCreate, db: AsyncSession=Depends(get_async_db)):
+async def create_product(product: ProductCreate, db: AsyncSession = Depends(get_async_db)):
     """
     Создаёт новый товар.
     """
     # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == product.category_id,
                                         CategoryModel.is_active == True)
-    category = db.scalars(stmt).first()
+    category_result = await db.scalars(stmt)
+    category = category_result.first()
     if not category:
         raise HTTPException(status_code=400, detail="Category not found or inactive")
 
     # Создание нового товара
     db_product = ProductModel(**product.model_dump())
     db.add(db_product)
-    db.commit()
-    db.refresh(db_product)
-    
+    await db.commit()
+    await db.refresh(db_product)
     return db_product
 
 
