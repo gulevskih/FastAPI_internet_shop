@@ -49,21 +49,24 @@ async def create_product(product: ProductCreate, db: AsyncSession = Depends(get_
 
 
 @router.get("/category/{category_id}", response_model=list[ProductSchema], status_code=status.HTTP_200_OK)
-async def get_products_by_category(category_id: int, db: Session=Depends(get_db)):
+async def get_products_by_category(category_id: int, db: AsyncSession = Depends(get_async_db)):
     """
     Возвращает список товаров в указанной категории по её ID.
     """
     # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == category_id,
                                        CategoryModel.is_active == True)
-    category = db.scalars(stmt).first()
+    category_result = await db.scalars(stmt)
+    category = category_result.first()
     if not category:
-        raise HTTPException(status_code=404, detail="Category not found or inactive")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Category not found or inactive")
     
     # Получение списка товаров в указанной катероии
     stmt = select(ProductModel).where(ProductModel.category_id == category_id,
                                       ProductModel.is_active == True)
-    products = db.scalars(stmt).all()
+    product_result = await db.scalars(stmt)
+    products = product_result.all()
     return products
 
 
