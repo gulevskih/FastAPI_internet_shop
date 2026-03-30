@@ -97,32 +97,34 @@ async def get_product(product_id: int, db: AsyncSession=Depends(get_async_db)):
 
 
 @router.put("/{product_id}", response_model=ProductSchema)
-async def update_product(product_id: int, product: ProductCreate, db: Session = Depends(get_db)):
+async def update_product(product_id: int, product: ProductCreate, db: AsyncSession  = Depends(get_async_db)):
     """
     Обновляет товар по его ID.
     """
     # Проверяем, существует ли товар
-    db_product = db.scalars(
+    product_result = await db.scalars(
         select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
-    ).first()
+    )
+    db_product = product_result.first()
     if not db_product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
 
     # Проверяем, существует ли активная категория
-    category = db.scalars(
+    category_result = await db.scalars(
         select(CategoryModel).where(CategoryModel.id == product.category_id,
                                     CategoryModel.is_active == True)
-    ).first()
+    )
+    category = category_result.first()
     if not category:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Category not found or inactive")
 
     # Обновляем товар
-    db.execute(
+    await db.execute(
         update(ProductModel).where(ProductModel.id == product_id).values(**product.model_dump())
     )
-    db.commit()
-    db.refresh(db_product)
+    await db.commit()
+    await db.refresh(db_product)
     return db_product
 
 
