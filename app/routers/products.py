@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.products import Product as ProductModel
 from app.models.categories import Category as CategoryModel
 from app.schemas import Product as ProductSchema, ProductCreate
-from app.db_depends import get_db, get_async_db
+from app.db_depends import get_async_db
 
 
 # Создаём маршрутизатор для товаров
@@ -129,20 +128,21 @@ async def update_product(product_id: int, product: ProductCreate, db: AsyncSessi
 
 
 @router.delete("/{product_id}")
-async def delete_product(product_id: int, db: Session = Depends(get_db)):
+async def delete_product(product_id: int, db: AsyncSession = Depends(get_async_db)):
     """
-    Удаляет товар по его ID (логическое удаление).
+    Выполняет мягкое удаление товара по его ID, устанавливая is_active = False.
     """
     # Проверяем, существует ли активный товар
-    product = db.scalars(
+    product_result = await db.scalars(
         select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
-    ).first()
+    )
+    product = product_result.first()
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Product not found or inactive")
 
     # Изменяем объект устанавив is_active=False и сохраняем
     product.is_active = False
-    db.commit()
-
-    return {"status": "success", "message": "Product marked as inactive"}
+    await db.commit()
+    await db.refresh(product)
+    return product
