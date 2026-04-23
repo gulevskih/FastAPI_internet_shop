@@ -1,0 +1,4 @@
+.env
+.venv
+ecommerce.db
+__pycache__
