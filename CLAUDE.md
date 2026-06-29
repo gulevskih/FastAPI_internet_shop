@@ -4,9 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Run the development server:**
+**Run the backend:**
 ```bash
 uvicorn app.main:app --reload
+```
+
+**Run the frontend (from `frontend/` directory):**
+```bash
+cd frontend
+npm run dev
+```
+
+Or from the project root:
+```bash
+npm run dev --prefix frontend
 ```
 
 **Run Alembic migrations:**
@@ -23,12 +34,20 @@ alembic downgrade -1
 
 **Install dependencies:**
 ```bash
+# Backend
 pip install -r requirements.txt
+
+# Frontend
+cd frontend && npm install
 ```
 
 ## Architecture
 
-This is an async FastAPI e-commerce REST API backed by PostgreSQL via SQLAlchemy 2.0 (async).
+This is a full-stack e-commerce application: an async FastAPI REST API (backend) with a React SPA (frontend).
+
+### Backend
+
+Backed by PostgreSQL via SQLAlchemy 2.0 (async).
 
 **Key layers:**
 
@@ -42,10 +61,29 @@ This is an async FastAPI e-commerce REST API backed by PostgreSQL via SQLAlchemy
 - `app/routers/` — one router per resource (`categories`, `products`, `users`), all async
 
 **Auth flow:**
-`POST /users/` registers a user (`buyer` or `seller`). `POST /users/token` returns a JWT. Seller-only endpoints (`POST/PUT/DELETE /products/`) require `Authorization: Bearer <token>` and the user's `role == "seller"`. Sellers may only modify their own products (`seller_id == current_user.id`).
+`POST /users/` registers a user (`buyer` or `seller`). `POST /users/token` returns a JWT containing `id`, `role`, and `sub` (email). Seller-only endpoints (`POST/PUT/DELETE /products/`, `GET /products/my`) require `Authorization: Bearer <token>` and the user's `role == "seller"`. Sellers may only modify their own products (`seller_id == current_user.id`).
 
 **Soft deletes:** Both `Category` and `Product` use `is_active=False` instead of actual row deletion. All read queries filter on `is_active == True`.
 
 **Migrations:** Located in `app/migragions/` (note the typo in the directory name). The `env.py` is configured for async migrations using `asyncpg`.
 
 **Database connection string** is hardcoded in both `app/database.py` and `alembic.ini`. The `.env` file only needs `SECRET_KEY`.
+
+### Frontend
+
+React 19 SPA built with Vite, located in `frontend/`.
+
+**Stack:** React 19, React Router 7, Vite 8, oxlint.
+
+**Key files:**
+
+- `frontend/src/api/client.js` — all API calls; proxies `/api/*` to `http://localhost:8000` via Vite dev server
+- `frontend/src/context/AuthContext.jsx` — stores JWT in localStorage; decodes it client-side (`parseToken`) to expose `user.id`, `user.role`, `user.sub`
+- `frontend/src/components/Navbar.jsx` — top navigation
+- `frontend/src/pages/LoginPage.jsx` — login form
+- `frontend/src/pages/RegisterPage.jsx` — registration form (`buyer` or `seller`)
+- `frontend/src/pages/CatalogPage.jsx` — public product catalog
+- `frontend/src/pages/CategoriesPage.jsx` — category management (seller only)
+- `frontend/src/pages/SellerProductsPage.jsx` — seller's own products CRUD; uses `GET /products/my`
+
+**Proxy:** Vite proxies `/api` → `http://localhost:8000`, stripping the `/api` prefix, so the backend runs without CORS configuration in development.
