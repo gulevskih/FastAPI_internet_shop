@@ -53,6 +53,19 @@ async def create_product(
     return db_product
 
 
+@router.get("/my", response_model=list[ProductSchema], status_code=status.HTTP_200_OK)
+async def get_my_products(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_seller)
+):
+    stmt = select(ProductModel).where(
+        ProductModel.seller_id == current_user.id,
+        ProductModel.is_active == True
+    )
+    result = await db.scalars(stmt)
+    return result.all()
+
+
 @router.get("/category/{category_id}", response_model=list[ProductSchema], status_code=status.HTTP_200_OK)
 async def get_products_by_category(category_id: int, db: AsyncSession = Depends(get_async_db)):
     """
