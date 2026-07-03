@@ -169,7 +169,7 @@ async def delete_product(
     if product.seller_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own products") 
 
-    # Изменяем объект устанавив is_active=False и сохраняем
+    # Изменяем объект установив is_active=False и сохраняем
     await db.execute(
         update(ProductModel).where(ProductModel.id == product_id).values(is_active=False)
     )

@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.categories import Category as CategoryModel
 from app.schemas import Category as CategorySchema, CategoryCreate
+from app.models.users import User as UserModel
+from app.auth import get_current_admin
 from app.db_depends import get_async_db
 
 
@@ -26,9 +28,13 @@ async def get_all_categories(db: AsyncSession = Depends(get_async_db)):
 
 
 @router.post("/", response_model=CategorySchema, status_code=status.HTTP_201_CREATED)
-async def create_category(category: CategoryCreate, db: AsyncSession=Depends(get_async_db)):
+async def create_category(
+        category: CategoryCreate,
+        db: AsyncSession=Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_admin)
+):
     """
-    Создаёт новую категорию.
+    Создаёт новую категорию (только для 'admin').
     """
     # Проверка существования parent_id, если указан
     if category.parent_id is not None:
@@ -48,9 +54,14 @@ async def create_category(category: CategoryCreate, db: AsyncSession=Depends(get
 
 
 @router.put("/{category_id}", response_model=CategorySchema)
-async def update_category(category_id: int, category: CategoryCreate, db: AsyncSession = Depends(get_async_db)):
+async def update_category(
+        category_id: int,
+        category: CategoryCreate,
+        db: AsyncSession = Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_admin)
+):
     """
-    Обновляет категорию по её ID.
+    Обновляет категорию по её ID (только для 'admin').
     """
     # Проверка существования категории
     stmt = select(CategoryModel).where(CategoryModel.id == category_id,
@@ -83,9 +94,13 @@ async def update_category(category_id: int, category: CategoryCreate, db: AsyncS
 
 
 @router.delete("/{category_id}", response_model=CategorySchema, status_code=status.HTTP_200_OK)
-async def delete_category(category_id: int, db: AsyncSession = Depends(get_async_db)):
+async def delete_category(
+        category_id: int,
+        db: AsyncSession = Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_admin)
+):
     """
-    Логически удаляет категорию по её ID, устанавливая is_active=False.
+    Логически удаляет категорию по её ID, устанавливая is_active=False (только для 'admin').
     """
     # Проверка существования активной категории
     stmt = select(CategoryModel).where(CategoryModel.id == category_id, CategoryModel.is_active == True)
