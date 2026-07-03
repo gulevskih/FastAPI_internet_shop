@@ -16,10 +16,10 @@ export default function Navbar() {
       <div className="navbar-links">
         <Link to="/">Каталог</Link>
         {user?.role === 'seller' && (
-          <>
-            <Link to="/seller/products">Мои товары</Link>
-            <Link to="/seller/categories">Категории</Link>
-          </>
+          <Link to="/seller/products">Мои товары</Link>
+        )}
+        {(user?.role === 'seller' || user?.role === 'admin') && (
+          <Link to="/seller/categories">Категории</Link>
         )}
         {user ? (
           <button onClick={handleLogout} className="btn btn-outline">

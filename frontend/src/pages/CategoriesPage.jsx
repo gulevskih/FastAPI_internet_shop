@@ -17,7 +17,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!user || user.role !== 'seller') {
+    if (!user || (user.role !== 'seller' && user.role !== 'admin')) {
       navigate('/')
       return
     }
